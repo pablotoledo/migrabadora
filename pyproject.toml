@@ -1,0 +1,58 @@
+[tool.poetry]
+name = "mp3recorder"
+version = "0.1.0"
+description = "Minimal terminal-based MP3 audio recorder for macOS"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "mp3recorder", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+sounddevice = "^0.5.1"
+numpy = "^2.0.0"
+pydub = "^0.25.1"
+scipy = "^1.14.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+pytest-cov = "^6.0.0"
+ruff = "^0.8.0"
+
+[tool.poetry.scripts]
+mp3recorder = "mp3recorder.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PTH",    # flake8-use-pathlib
+    "RUF",    # Ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mp3recorder"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-v --tb=short"
