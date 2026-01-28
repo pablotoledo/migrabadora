@@ -4,7 +4,11 @@ import argparse
 import sys
 import time
 
-from mp3recorder.devices import get_default_device, get_device_by_name, list_audio_devices
+from mp3recorder.devices import (
+    get_default_device,
+    get_device_by_name,
+    list_audio_devices,
+)
 from mp3recorder.recorder import AudioRecorder
 
 

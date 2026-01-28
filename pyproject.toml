@@ -8,10 +8,10 @@ packages = [{include = "mp3recorder", from = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-sounddevice = "^0.5.1"
-numpy = "^2.0.0"
+sounddevice = "^0.5.0"
+numpy = ">=1.26.0"
 pydub = "^0.25.1"
-scipy = "^1.14.0"
+audioop-lts = {version = "^0.2.1", python = ">=3.13"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
@@ -51,6 +51,9 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["mp3recorder"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ARG002"]  # Fixtures require args even if not directly used
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

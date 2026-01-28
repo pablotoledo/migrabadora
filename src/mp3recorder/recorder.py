@@ -1,13 +1,12 @@
 """Audio recorder module for MP3 Recorder."""
 
-import io
 import tempfile
+import wave
 from pathlib import Path
 
 import numpy as np
 import sounddevice as sd
 from pydub import AudioSegment
-from scipy.io import wavfile
 
 
 class AudioRecorder:
@@ -93,8 +92,8 @@ class AudioRecorder:
             tmp_wav_path = Path(tmp_wav.name)
 
         try:
-            # Save as WAV first
-            wavfile.write(tmp_wav_path, self.sample_rate, audio_int16)
+            # Save as WAV first using built-in wave module
+            self._write_wav(tmp_wav_path, audio_int16)
 
             # Convert to MP3 using pydub
             audio_segment = AudioSegment.from_wav(str(tmp_wav_path))
@@ -110,6 +109,19 @@ class AudioRecorder:
             tmp_wav_path.unlink(missing_ok=True)
 
         return output_path
+
+    def _write_wav(self, path: Path, audio_int16: np.ndarray) -> None:
+        """Write audio data to WAV file using built-in wave module.
+
+        Args:
+            path: Path to write the WAV file.
+            audio_int16: Audio data as int16 numpy array.
+        """
+        with wave.open(str(path), "wb") as wav_file:
+            wav_file.setnchannels(self.channels)
+            wav_file.setsampwidth(2)  # 16-bit = 2 bytes
+            wav_file.setframerate(self.sample_rate)
+            wav_file.writeframes(audio_int16.tobytes())
 
     def save_wav(self, output_path: str | Path) -> Path:
         """Save the recorded audio as a WAV file.
@@ -130,7 +142,7 @@ class AudioRecorder:
 
         # Convert float32 audio to int16 for WAV
         audio_int16 = (self._audio_data * 32767).astype(np.int16)
-        wavfile.write(output_path, self.sample_rate, audio_int16)
+        self._write_wav(output_path, audio_int16)
 
         return output_path
 

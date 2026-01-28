@@ -12,14 +12,13 @@ def mock_audio_data():
     # 1 second of stereo audio at 44100 Hz
     duration = 1.0
     sample_rate = 44100
-    channels = 2
     samples = int(duration * sample_rate)
-    
+
     # Generate sine wave test signal
     t = np.linspace(0, duration, samples, dtype=np.float32)
     left = np.sin(2 * np.pi * 440 * t)  # 440 Hz sine wave
     right = np.sin(2 * np.pi * 880 * t)  # 880 Hz sine wave
-    
+
     return np.column_stack((left, right)).astype(np.float32)
 
 
@@ -61,11 +60,11 @@ def mock_sounddevice(mock_devices, mock_audio_data):
          patch("sounddevice.default", new=MagicMock()) as mock_default, \
          patch("sounddevice.rec") as mock_rec, \
          patch("sounddevice.wait") as mock_wait:
-        
+
         mock_query.return_value = mock_devices
         mock_default.device = (0, 0)  # Default input and output device indices
         mock_rec.return_value = mock_audio_data
-        
+
         yield {
             "query_devices": mock_query,
             "default": mock_default,
