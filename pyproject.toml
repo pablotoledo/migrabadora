@@ -12,6 +12,7 @@ sounddevice = "^0.5.0"
 numpy = ">=1.26.0"
 pydub = "^0.25.1"
 audioop-lts = {version = "^0.2.1", python = ">=3.13"}
+rumps = "^0.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
@@ -20,6 +21,7 @@ ruff = "^0.8.0"
 
 [tool.poetry.scripts]
 mp3recorder = "mp3recorder.cli:main"
+mp3recorder-menubar = "mp3recorder.menubar:main"
 
 [build-system]
 requires = ["poetry-core"]
