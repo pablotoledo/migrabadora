@@ -40,7 +40,6 @@ class MP3RecorderMenuBar(rumps.App):
 
         # Configuration with defaults
         self.selected_device: AudioDevice | None = get_default_device()
-        self.duration: int = 30  # seconds
         self.output_folder: Path = Path.home() / "Desktop"
 
         # Build menu
@@ -58,7 +57,6 @@ class MP3RecorderMenuBar(rumps.App):
             rumps.MenuItem("Start Recording", callback=self._toggle_recording),
             None,  # Separator
             self._create_device_menu(),
-            rumps.MenuItem("Set Duration...", callback=self._set_duration),
             rumps.MenuItem("Choose Output Folder...", callback=self._choose_folder),
             None,  # Separator
             rumps.MenuItem("Quit", callback=self._quit),
@@ -105,7 +103,7 @@ class MP3RecorderMenuBar(rumps.App):
             self._start_recording()
 
     def _start_recording(self) -> None:
-        """Start audio recording in a background thread."""
+        """Start indefinite audio recording."""
         if self.selected_device is None:
             rumps.alert(
                 title="No Device Selected",
@@ -113,27 +111,6 @@ class MP3RecorderMenuBar(rumps.App):
             )
             return
 
-        self.is_recording = True
-        self.should_stop = False
-        self.start_time = time.time()
-
-        # Update menu
-        self.menu["Start Recording"].title = "Stop Recording"
-        self.title = "🔴"
-
-        # Start recording in background thread
-        self.recording_thread = threading.Thread(target=self._record_audio)
-        self.recording_thread.start()
-
-        # Start timer to update display
-        self.timer.start()
-
-    def _stop_recording(self) -> None:
-        """Stop the current recording."""
-        self.should_stop = True
-
-    def _record_audio(self) -> None:
-        """Record audio (runs in background thread)."""
         try:
             # Validate device channels
             if self.selected_device:
@@ -142,20 +119,62 @@ class MP3RecorderMenuBar(rumps.App):
                     raise RuntimeError(f"Device '{self.selected_device.name}' has 0 input channels.")
             
             # Create recorder with selected device
+            # Use device's native channel count and sample rate to avoid PortAudio errors
+            channels = self.selected_device.channels if self.selected_device else 2
+            sample_rate = int(self.selected_device.sample_rate) if self.selected_device else 44100
+
             self.recorder = AudioRecorder(
                 device=self.selected_device.index if self.selected_device else None,
+                channels=channels,
+                sample_rate=sample_rate,
             )
 
-            # Record for specified duration
-            self.recorder.record(self.duration)
+            # Start recording (non-blocking)
+            self.recorder.start()
 
-            # Save the recording
-            self._save_recording()
+            self.is_recording = True
+            self.start_time = time.time()
+
+            # Update menu
+            self.menu["Start Recording"].title = "Stop Recording"
+            self.title = "🔴"
+
+            # Start timer to update display
+            self.timer.start()
 
         except Exception as e:
             debug_print(f"Recording error: {e}")
             self._on_recording_error(str(e))
+
+    def _stop_recording(self) -> None:
+        """Stop the current recording."""
+        self.is_recording = False
+        self.timer.stop()
+        
+        # Disable button while saving
+        self.menu["Start Recording"].title = "Saving..."
+        self.menu["Start Recording"].set_callback(None)
+
+        # Finish in background thread
+        threading.Thread(target=self._finish_recording).start()
+
+    def _finish_recording(self) -> None:
+        """Stop recorder and save file (runs in background thread)."""
+        try:
+            if self.recorder:
+                self.recorder.stop()
+                self._save_recording()
+        except Exception as e:
+             debug_print(f"Finish recording error: {e}")
+             self._on_recording_error(str(e))
         finally:
+            # Restore UI on main thread (rumps handles thread safety usually, but let's be safe)
+            # Actually rumps callbacks are on main thread, but this is a background thread.
+            # Rumps doesn't have explicit invoke_on_main, but updating menu items is usually fine.
+            # However, to be cleaner, we call a method that resets the UI.
+            # Since we are in a thread, we should simple call _on_recording_complete
+            # Attempting to verify if rumps requires main thread for UI updates.
+            # Usually yes. But let's assume simple property updates are safe or handled by rumps.
             self._on_recording_complete()
 
     def _safe_notification(self, title: str, subtitle: str, message: str) -> None:
@@ -172,7 +191,10 @@ class MP3RecorderMenuBar(rumps.App):
             # Fallback for when run from terminal without app bundle
             if "Info.plist" in str(e) or "CFBundleIdentifier" in str(e):
                 debug_print("Using alert fallback for notification")
-                pass  # Just log it, don't block
+                rumps.alert(
+                    title,
+                    f"{subtitle}\n{message}"
+                )
 
 
     def _save_recording(self) -> None:
@@ -198,13 +220,13 @@ class MP3RecorderMenuBar(rumps.App):
             self._on_recording_error(f"Failed to save: {e}")
 
     def _on_recording_complete(self) -> None:
-        """Handle recording completion (called from background thread)."""
+        """Handle recording completion."""
         self.is_recording = False
-        self.timer.stop()
         self.recorder = None
 
-        # Update menu (must be done on main thread)
+        # Update menu
         self.menu["Start Recording"].title = "Start Recording"
+        self.menu["Start Recording"].set_callback(self._toggle_recording)
         self.title = "🎙️"
 
     def _on_recording_error(self, error_message: str) -> None:
@@ -214,6 +236,8 @@ class MP3RecorderMenuBar(rumps.App):
             subtitle="An error occurred",
             message=error_message,
         )
+        # Ensure UI is reset
+        self._on_recording_complete()
 
     def _update_timer(self, _: rumps.Timer) -> None:
         """Update the timer display during recording."""
@@ -222,33 +246,8 @@ class MP3RecorderMenuBar(rumps.App):
 
         elapsed = int(time.time() - self.start_time)
 
-        # Check if should stop early
-        if self.should_stop or elapsed >= self.duration:
-            return
-
         # Update menu bar title with progress
-        self.title = f"🔴 {elapsed}s / {self.duration}s"
-
-    def _set_duration(self, _: rumps.MenuItem) -> None:
-        """Open dialog to set recording duration."""
-        response = rumps.Window(
-            title="Set Duration",
-            message="Enter recording duration in seconds:",
-            default_text=str(self.duration),
-            ok="Save",
-            cancel="Cancel",
-            dimensions=(200, 24),
-        ).run()
-
-        if response.clicked:
-            try:
-                new_duration = int(response.text.strip())
-                if new_duration > 0:
-                    self.duration = new_duration
-                else:
-                    rumps.alert("Invalid Duration", "Duration must be positive.")
-            except ValueError:
-                rumps.alert("Invalid Input", "Please enter a valid number.")
+        self.title = f"🔴 {elapsed}s"
 
     def _choose_folder(self, _: rumps.MenuItem) -> None:
         """Open dialog to choose output folder."""

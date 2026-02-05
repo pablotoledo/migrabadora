@@ -32,6 +32,45 @@ class AudioRecorder:
         self.channels = channels
         self.bitrate = bitrate
         self._audio_data: np.ndarray | None = None
+        self._frames: list[np.ndarray] = []
+        self._stream: sd.InputStream | None = None
+
+    def start(self) -> None:
+        """Start indefinite recording."""
+        self._frames = []
+        self._audio_data = None
+        
+        try:
+            self._stream = sd.InputStream(
+                samplerate=self.sample_rate,
+                channels=self.channels,
+                device=self.device,
+                dtype=np.float32,
+                callback=self._callback,
+            )
+            self._stream.start()
+        except Exception as e:
+            raise RuntimeError(f"Failed to start recording: {e}") from e
+
+    def stop(self) -> np.ndarray:
+        """Stop recording and return the recorded audio data."""
+        if self._stream:
+            self._stream.stop()
+            self._stream.close()
+            self._stream = None
+        
+        if self._frames:
+            self._audio_data = np.concatenate(self._frames)
+        else:
+            self._audio_data = np.zeros((0, self.channels), dtype=np.float32)
+            
+        return self._audio_data
+
+    def _callback(self, indata: np.ndarray, _frames: int, _time, status: sd.CallbackFlags) -> None:
+        """Callback for collecting audio frames."""
+        if status:
+            print(f"Recording status: {status}")
+        self._frames.append(indata.copy())
 
     def record(self, duration: float) -> np.ndarray:
         """Record audio for the specified duration.
@@ -46,16 +85,10 @@ class AudioRecorder:
             RuntimeError: If recording fails.
         """
         try:
-            self._audio_data = sd.rec(
-                int(duration * self.sample_rate),
-                samplerate=self.sample_rate,
-                channels=self.channels,
-                device=self.device,
-                dtype=np.float32,
-            )
-            sd.wait()  # Wait until recording is finished
-            return self._audio_data
-        except sd.PortAudioError as e:
+            self.start()
+            sd.sleep(int(duration * 1000))
+            return self.stop()
+        except Exception as e:
             raise RuntimeError(f"Recording failed: {e}") from e
 
     def get_audio_data(self) -> np.ndarray | None:
