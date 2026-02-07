@@ -22,12 +22,9 @@ except ImportError:
 from mp3recorder import __version__
 from mp3recorder.config import AppConfig, load as load_config, save as save_config
 from mp3recorder.dependencies import (
-    check_ffmpeg,
     copy_to_clipboard,
     get_blackhole_install_instructions,
     get_blackhole_url,
-    get_ffmpeg_clipboard_command,
-    get_ffmpeg_install_instructions,
     open_path,
     open_url,
 )
@@ -76,9 +73,6 @@ class MP3RecorderMenuBar(rumps.App):
         # Output folder from config
         self.output_folder: Path = Path(self.config.output_folder).expanduser()
 
-        # Check dependencies on startup
-        self._check_dependencies_on_startup()
-
         # Build menu
         self._build_menu()
 
@@ -101,17 +95,6 @@ class MP3RecorderMenuBar(rumps.App):
 
         # Fall back to default device
         self.selected_device = get_default_device()
-
-    def _check_dependencies_on_startup(self) -> None:
-        """Check for required dependencies and show alert if missing."""
-        ffmpeg_ok, _ = check_ffmpeg()
-        if not ffmpeg_ok:
-            logger.warning("FFmpeg not found on startup")
-            rumps.alert(
-                title="FFmpeg Required",
-                message="FFmpeg is required to save MP3 files.\n\n"
-                "Click 'Setup Guide → Install FFmpeg...' to learn how to install it.",
-            )
 
     def _build_menu(self) -> None:
         """Build the menu bar menu."""
@@ -189,9 +172,8 @@ class MP3RecorderMenuBar(rumps.App):
 
     def _create_setup_guide_menu(self) -> rumps.MenuItem:
         """Create the setup guide submenu."""
-        setup_menu = rumps.MenuItem("Setup Guide")
+        setup_menu = rumps.MenuItem("Help")
 
-        setup_menu.add(rumps.MenuItem("Install FFmpeg...", callback=self._show_ffmpeg_help))
         setup_menu.add(rumps.MenuItem("Setup BlackHole...", callback=self._show_blackhole_help))
         setup_menu.add(None)  # Separator
         setup_menu.add(rumps.MenuItem("Open Logs Folder", callback=self._open_logs_folder))
@@ -453,22 +435,6 @@ class MP3RecorderMenuBar(rumps.App):
             open_path(path.parent)
         else:
             rumps.alert("File Not Found", f"Recording not found:\n{path}")
-
-    def _show_ffmpeg_help(self, _: rumps.MenuItem) -> None:
-        """Show FFmpeg installation instructions."""
-        instructions = get_ffmpeg_install_instructions()
-        command = get_ffmpeg_clipboard_command()
-
-        response = rumps.alert(
-            title="Install FFmpeg",
-            message=instructions,
-            ok="Copy Install Command",
-            cancel="Close",
-        )
-
-        if response == 1:  # OK button clicked
-            if copy_to_clipboard(command):
-                rumps.alert("Copied!", f"Command copied to clipboard:\n\n{command}")
 
     def _show_blackhole_help(self, _: rumps.MenuItem) -> None:
         """Show BlackHole setup instructions."""

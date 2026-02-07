@@ -13,20 +13,72 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Cache for FFmpeg path
+_ffmpeg_path_cache: str | None = None
+
+
+def get_bundled_ffmpeg() -> str | None:
+    """Get the path to the bundled FFmpeg from imageio-ffmpeg.
+
+    Returns:
+        Path to bundled FFmpeg if available, None otherwise.
+    """
+    try:
+        import imageio_ffmpeg
+        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        if ffmpeg_path and Path(ffmpeg_path).exists():
+            logger.debug(f"Bundled FFmpeg found at: {ffmpeg_path}")
+            return ffmpeg_path
+    except (ImportError, Exception) as e:
+        logger.debug(f"imageio-ffmpeg not available: {e}")
+    return None
+
+
+def get_ffmpeg_path() -> str | None:
+    """Get the best available FFmpeg path.
+
+    Checks in order:
+    1. Bundled FFmpeg from imageio-ffmpeg
+    2. System FFmpeg in PATH
+
+    Returns:
+        Path to FFmpeg if found, None otherwise.
+    """
+    global _ffmpeg_path_cache
+
+    if _ffmpeg_path_cache is not None:
+        return _ffmpeg_path_cache
+
+    # Try bundled FFmpeg first
+    bundled = get_bundled_ffmpeg()
+    if bundled:
+        _ffmpeg_path_cache = bundled
+        return bundled
+
+    # Fall back to system FFmpeg
+    system_ffmpeg = shutil.which("ffmpeg")
+    if system_ffmpeg:
+        _ffmpeg_path_cache = system_ffmpeg
+        logger.debug(f"System FFmpeg found at: {system_ffmpeg}")
+        return system_ffmpeg
+
+    return None
+
 
 def check_ffmpeg() -> tuple[bool, str | None]:
     """Check if FFmpeg is installed and available.
 
+    Checks bundled FFmpeg first, then falls back to system FFmpeg.
+
     Returns:
         Tuple of (is_available, path_if_found).
     """
-    ffmpeg_path = shutil.which("ffmpeg")
+    ffmpeg_path = get_ffmpeg_path()
 
     if ffmpeg_path:
-        logger.debug(f"FFmpeg found at: {ffmpeg_path}")
         return True, ffmpeg_path
 
-    logger.warning("FFmpeg not found in PATH")
+    logger.warning("FFmpeg not found (neither bundled nor in PATH)")
     return False, None
 
 

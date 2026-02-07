@@ -12,6 +12,26 @@ from pydub import AudioSegment
 logger = logging.getLogger(__name__)
 
 
+def _configure_ffmpeg() -> None:
+    """Configure pydub to use bundled FFmpeg if available."""
+    try:
+        from mp3recorder.dependencies import get_ffmpeg_path
+        ffmpeg_path = get_ffmpeg_path()
+        if ffmpeg_path:
+            AudioSegment.converter = ffmpeg_path
+            # Also set ffprobe path (same directory as ffmpeg)
+            ffprobe = Path(ffmpeg_path).parent / "ffprobe"
+            if ffprobe.exists():
+                AudioSegment.ffprobe = str(ffprobe)
+            logger.debug(f"Configured pydub to use FFmpeg: {ffmpeg_path}")
+    except Exception as e:
+        logger.debug(f"Could not configure bundled FFmpeg: {e}")
+
+
+# Configure FFmpeg on module import
+_configure_ffmpeg()
+
+
 class AudioRecorder:
     """Records audio from an input device and exports to MP3."""
 

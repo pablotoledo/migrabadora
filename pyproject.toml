@@ -13,6 +13,7 @@ numpy = ">=1.26.0"
 pydub = "^0.25.1"
 audioop-lts = {version = "^0.2.1", python = ">=3.13"}
 rumps = "^0.4.0"
+imageio-ffmpeg = "^0.6.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"

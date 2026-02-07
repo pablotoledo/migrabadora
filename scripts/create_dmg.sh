@@ -1,47 +1,46 @@
 #!/bin/bash
 # Create DMG installer for MP3 Recorder
-# Requires: create-dmg (brew install create-dmg)
+# Uses native hdiutil (no external dependencies)
 
 set -e
 
+APP_NAME="MP3 Recorder"
+DMG_NAME="${APP_NAME}.dmg"
+VOLUME_NAME="${APP_NAME}"
+
 echo "📀 Creating DMG installer..."
 
-# Check for create-dmg
-if ! command -v create-dmg &> /dev/null; then
-    echo "❌ Error: create-dmg not found"
-    echo "   Install with: brew install create-dmg"
-    exit 1
-fi
-
 # Check for app bundle
-if [ ! -d "dist/MP3 Recorder.app" ]; then
-    echo "❌ Error: App bundle not found at dist/MP3 Recorder.app"
+if [ ! -d "dist/${APP_NAME}.app" ]; then
+    echo "❌ Error: App bundle not found at dist/${APP_NAME}.app"
     echo "   Run 'make build-app' first"
     exit 1
 fi
 
 # Remove existing DMG
-rm -f "dist/MP3 Recorder.dmg"
+rm -f "dist/${DMG_NAME}"
 
-# Create DMG
-create-dmg \
-    --volname "MP3 Recorder" \
-    --volicon "resources/icon.icns" \
-    --window-pos 200 120 \
-    --window-size 600 400 \
-    --icon-size 100 \
-    --icon "MP3 Recorder.app" 150 190 \
-    --hide-extension "MP3 Recorder.app" \
-    --app-drop-link 450 190 \
-    "dist/MP3 Recorder.dmg" \
-    "dist/MP3 Recorder.app" \
-    || true  # create-dmg returns non-zero even on success sometimes
+# Create temporary DMG directory
+TEMP_DIR=$(mktemp -d)
+cp -R "dist/${APP_NAME}.app" "${TEMP_DIR}/"
 
-if [ -f "dist/MP3 Recorder.dmg" ]; then
+# Create symbolic link to Applications
+ln -s /Applications "${TEMP_DIR}/Applications"
+
+# Create DMG using hdiutil
+hdiutil create -volname "${VOLUME_NAME}" \
+    -srcfolder "${TEMP_DIR}" \
+    -ov -format UDZO \
+    "dist/${DMG_NAME}"
+
+# Cleanup
+rm -rf "${TEMP_DIR}"
+
+if [ -f "dist/${DMG_NAME}" ]; then
     echo ""
-    echo "✅ DMG created: dist/MP3 Recorder.dmg"
+    echo "✅ DMG created: dist/${DMG_NAME}"
     echo ""
-    echo "File size: $(du -h 'dist/MP3 Recorder.dmg' | cut -f1)"
+    echo "File size: $(du -h "dist/${DMG_NAME}" | cut -f1)"
 else
     echo ""
     echo "❌ DMG creation failed"

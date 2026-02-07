@@ -12,23 +12,43 @@ from mp3recorder.dependencies import (
     copy_to_clipboard,
     get_blackhole_install_instructions,
     get_blackhole_url,
+    get_bundled_ffmpeg,
     get_ffmpeg_clipboard_command,
     get_ffmpeg_install_instructions,
+    get_ffmpeg_path,
     get_ffmpeg_version,
     get_system_info,
     open_path,
     open_url,
 )
+import mp3recorder.dependencies as deps_module
 
 
 class TestCheckFfmpeg:
     """Tests for check_ffmpeg function."""
 
-    def test_returns_true_when_found(self):
-        """Should return True and path when FFmpeg is found."""
-        with patch("shutil.which") as mock_which:
+    def setup_method(self):
+        """Reset the FFmpeg path cache before each test."""
+        deps_module._ffmpeg_path_cache = None
+
+    def test_returns_true_when_bundled_found(self):
+        """Should return True when bundled FFmpeg is found."""
+        with patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled:
+            mock_bundled.return_value = "/path/to/bundled/ffmpeg"
+
+            available, path = check_ffmpeg()
+
+            assert available is True
+            assert "ffmpeg" in path
+
+    def test_returns_true_when_system_found(self):
+        """Should return True when system FFmpeg is found (no bundled)."""
+        with patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled, \
+             patch("shutil.which") as mock_which:
+            mock_bundled.return_value = None
             mock_which.return_value = "/usr/local/bin/ffmpeg"
 
+            deps_module._ffmpeg_path_cache = None  # Reset cache
             available, path = check_ffmpeg()
 
             assert available is True
@@ -36,9 +56,12 @@ class TestCheckFfmpeg:
 
     def test_returns_false_when_not_found(self):
         """Should return False and None when FFmpeg is not found."""
-        with patch("shutil.which") as mock_which:
+        with patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled, \
+             patch("shutil.which") as mock_which:
+            mock_bundled.return_value = None
             mock_which.return_value = None
 
+            deps_module._ffmpeg_path_cache = None  # Reset cache
             available, path = check_ffmpeg()
 
             assert available is False
@@ -117,10 +140,16 @@ class TestGetFfmpegVersion:
 class TestGetSystemInfo:
     """Tests for get_system_info function."""
 
+    def setup_method(self):
+        """Reset cache before each test."""
+        deps_module._ffmpeg_path_cache = None
+
     def test_returns_dict_with_expected_keys(self):
         """Should return dict with all expected keys."""
-        with patch("shutil.which") as mock_which, \
+        with patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled, \
+             patch("shutil.which") as mock_which, \
              patch("sounddevice.query_devices") as mock_query:
+            mock_bundled.return_value = None
             mock_which.return_value = "/usr/local/bin/ffmpeg"
             mock_query.return_value = []
 

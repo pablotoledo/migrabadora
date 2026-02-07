@@ -11,14 +11,19 @@ Or using the build script:
     make build-app
 """
 
+from pathlib import Path
+
 from setuptools import setup
 
 APP = ["src/mp3recorder/menubar.py"]
 DATA_FILES: list = []
 
+# Check if icon exists
+ICON_PATH = Path("resources/icon.icns")
+ICON_FILE = str(ICON_PATH) if ICON_PATH.exists() else None
+
 OPTIONS = {
     "argv_emulation": False,
-    "iconfile": "resources/icon.icns",
     "plist": {
         "CFBundleName": "MP3 Recorder",
         "CFBundleDisplayName": "MP3 Recorder",
@@ -64,6 +69,10 @@ OPTIONS = {
         "docutils",
     ],
 }
+
+# Add icon only if it exists
+if ICON_FILE:
+    OPTIONS["iconfile"] = ICON_FILE
 
 setup(
     name="MP3 Recorder",

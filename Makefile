@@ -43,17 +43,19 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
-# Build the macOS app bundle
+# Build the macOS app bundle (simple wrapper)
 build-app: clean
 	@echo "📦 Building MP3 Recorder.app..."
-	poetry run python setup_app.py py2app
+	chmod +x scripts/build_simple_app.sh
+	./scripts/build_simple_app.sh
 	@echo "✅ Build complete: dist/MP3 Recorder.app"
 
-# Build app in alias mode (faster, for development)
-build-app-dev: clean
-	@echo "📦 Building MP3 Recorder.app (alias mode)..."
-	poetry run python setup_app.py py2app -A
-	@echo "✅ Build complete: dist/MP3 Recorder.app (alias mode)"
+# Build app with py2app (currently broken on macOS 26)
+build-app-py2app: clean
+	@echo "📦 Building MP3 Recorder.app with py2app..."
+	@echo "⚠️  Note: py2app may fail on macOS 26"
+	poetry run python setup_app.py py2app
+	@echo "✅ Build complete: dist/MP3 Recorder.app"
 
 # Create DMG installer
 dmg: build-app
