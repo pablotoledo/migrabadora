@@ -1,5 +1,6 @@
 """Audio recorder module for MP3 Recorder."""
 
+import logging
 import tempfile
 import wave
 from pathlib import Path
@@ -7,6 +8,8 @@ from pathlib import Path
 import numpy as np
 import sounddevice as sd
 from pydub import AudioSegment
+
+logger = logging.getLogger(__name__)
 
 
 class AudioRecorder:
@@ -69,7 +72,7 @@ class AudioRecorder:
     def _callback(self, indata: np.ndarray, _frames: int, _time, status: sd.CallbackFlags) -> None:
         """Callback for collecting audio frames."""
         if status:
-            print(f"Recording status: {status}")
+            logger.warning(f"Recording status: {status}")
         self._frames.append(indata.copy())
 
     def record(self, duration: float) -> np.ndarray:

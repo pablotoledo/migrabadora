@@ -4,91 +4,98 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MP3 Recorder is a minimal terminal-based MP3 audio recorder for macOS. It records audio from any input device (including BlackHole for system audio) and exports to MP3 format.
+MP3 Recorder is a macOS menu bar application for audio recording. It records from any input device (including BlackHole for system audio) and exports to MP3 format.
 
 **External requirements:** FFmpeg (for MP3 encoding), optionally BlackHole (for system audio recording).
 
 ## Development Commands
 
 ```bash
-# Install dependencies
-poetry install
+# Using Makefile (recommended)
+make install     # Install dependencies
+make dev         # Run the menu bar app
+make test        # Run tests with coverage
+make lint        # Run linter
+make format      # Format code
+make build-app   # Build macOS .app bundle
+make dmg         # Create DMG installer
 
-# Run tests
-poetry run pytest
-
-# Run tests with coverage
-poetry run pytest --cov=mp3recorder --cov-report=term-missing
-
-# Lint
-poetry run ruff check src/ tests/
-
-# Auto-fix lint issues
-poetry run ruff check --fix src/ tests/
-
-# Format code
-poetry run ruff format src/ tests/
-
-# Run the CLI
-poetry run mp3recorder list-devices
-poetry run mp3recorder record --duration 10 --output recording.mp3
+# Direct commands
+poetry run mp3recorder-menubar  # Run menu bar app
+poetry run mp3recorder record --duration 10  # CLI recording
 ```
 
 ## Architecture
 
 ```
 src/mp3recorder/
-├── cli.py         # CLI entry point, argument parsing, command handlers
-├── menubar.py     # macOS menu bar app using rumps
-├── recorder.py    # AudioRecorder class - core recording and MP3/WAV export
-├── devices.py     # Device discovery and selection (AudioDevice dataclass)
-├── __init__.py    # Package exports (AudioRecorder, __version__)
-└── __main__.py    # Module entry point for `python -m mp3recorder`
+├── __init__.py          # Package exports (AudioRecorder, __version__)
+├── __main__.py          # Module entry point
+├── cli.py               # CLI argument parsing and commands
+├── menubar.py           # macOS menu bar app (rumps)
+├── recorder.py          # AudioRecorder class - core recording engine
+├── devices.py           # Device discovery (AudioDevice dataclass)
+├── config.py            # Persistent configuration (JSON)
+├── dependencies.py      # FFmpeg/BlackHole detection and helpers
+├── logging_config.py    # Centralized logging setup
+└── startup.py           # LaunchAgent management (auto-start)
+
+scripts/
+├── build.sh             # Build the .app bundle
+├── create_dmg.sh        # Create DMG installer
+└── uninstall.sh         # Complete uninstallation
+
+tests/
+├── conftest.py          # Pytest fixtures (mock sounddevice)
+├── test_*.py            # Unit tests for each module
 ```
 
-### Menu Bar App
+### Menu Bar App Features
 
-The menu bar app (`menubar.py`) provides a graphical interface for recording audio from the macOS menu bar:
+- **Recording**: Start/Stop with visual feedback (🔴 MM:SS timer)
+- **Audio Quality**: 128k/192k/256k/320k bitrate selection
+- **Device Selection**: Choose input device from submenu
+- **Recent Recordings**: Quick access to last 5 recordings
+- **Setup Guide**: FFmpeg and BlackHole installation help
+- **Start at Login**: Automatic startup via LaunchAgent
+- **Persistent Config**: Settings saved to `~/Library/Application Support/MP3Recorder/`
+- **Logging**: Rotating logs at `~/Library/Logs/MP3Recorder/`
 
-```bash
-# Run the menu bar app
-poetry run mp3recorder-menubar
-```
+### Key Modules
 
-**Features:**
-- Start/Stop recording from menu bar icon
-- Select audio input device from submenu
-- Configure recording duration
-- Choose output folder for saved recordings
-- Real-time recording progress display (🔴 Xs / Ys)
-- Native macOS notifications when recording completes
-
-**Debug Mode:**
-The app currently runs with `DEBUG = True` enabled for easier troubleshooting. This prints status messages to the terminal.
-
-### Recording Flow
-
-1. `AudioRecorder.record(duration)` captures audio via sounddevice to numpy float32 array
-2. `save_mp3()` converts float32 → int16, writes temporary WAV, uses pydub/FFmpeg to encode MP3, deletes temp file
-3. Device selection accepts index (int), partial name (string), or None (default device)
-
-### Key Classes
-
-- `AudioRecorder` (recorder.py): Main recording engine with configurable sample_rate, channels, bitrate
-- `AudioDevice` (devices.py): Dataclass representing audio input device
+| Module | Purpose |
+|--------|---------|
+| `recorder.py` | Core audio capture via sounddevice, MP3/WAV export |
+| `config.py` | AppConfig dataclass, JSON persistence |
+| `dependencies.py` | FFmpeg/BlackHole detection, install instructions |
+| `startup.py` | LaunchAgent install/uninstall for auto-start |
+| `logging_config.py` | RotatingFileHandler setup |
 
 ## Testing
 
-Tests are in `tests/` and use pytest fixtures from `conftest.py` that mock the sounddevice module. All audio device interactions are mocked—tests don't require actual audio hardware.
+Tests mock the sounddevice module—no actual audio hardware needed.
 
 ```bash
-# Run a single test file
-poetry run pytest tests/test_recorder.py -v
-
-# Run a specific test
-poetry run pytest tests/test_cli.py::test_cmd_record -v
+make test              # Run all tests with coverage
+make test-v            # Verbose output
+poetry run pytest tests/test_recorder.py -v  # Single file
 ```
+
+## Building
+
+```bash
+make build-app   # Build MP3 Recorder.app to dist/
+make dmg         # Create DMG with drag-to-Applications
+```
+
+## Config Locations
+
+| Type | Path |
+|------|------|
+| Config | `~/Library/Application Support/MP3Recorder/config.json` |
+| Logs | `~/Library/Logs/MP3Recorder/mp3recorder.log` |
+| LaunchAgent | `~/Library/LaunchAgents/com.mp3recorder.menubar.plist` |
 
 ## Ruff Configuration
 
-Line length 88, Python 3.10 target. Per-file ignore: `ARG002` in tests (fixtures may have unused args).
+Line length 88, Python 3.10 target. Per-file ignore: `ARG002` in tests.

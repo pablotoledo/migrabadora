@@ -63,7 +63,7 @@ class TestAudioRecorderRecord:
         np.testing.assert_array_equal(recorder._audio_data, mock_audio_data)
 
     def test_record_calls_sounddevice_correctly(self, mock_sounddevice):
-        """Should call sounddevice.rec with correct parameters."""
+        """Should call sounddevice.InputStream with correct parameters."""
         recorder = AudioRecorder(
             device=1,
             sample_rate=48000,
@@ -71,19 +71,21 @@ class TestAudioRecorderRecord:
         )
         recorder.record(duration=2.0)
 
-        mock_sounddevice["rec"].assert_called_once()
-        call_kwargs = mock_sounddevice["rec"].call_args
+        # The recorder now uses InputStream for streaming recording
+        mock_sounddevice["InputStream"].assert_called_once()
+        call_kwargs = mock_sounddevice["InputStream"].call_args
 
         assert call_kwargs.kwargs["samplerate"] == 48000
         assert call_kwargs.kwargs["channels"] == 1
         assert call_kwargs.kwargs["device"] == 1
 
-    def test_record_waits_for_completion(self, mock_sounddevice):
-        """Should wait for recording to complete."""
+    def test_record_sleeps_for_duration(self, mock_sounddevice):
+        """Should sleep for the specified duration during recording."""
         recorder = AudioRecorder()
         recorder.record(duration=1.0)
 
-        mock_sounddevice["wait"].assert_called_once()
+        # The record() method calls sd.sleep(duration_ms) after starting
+        mock_sounddevice["sleep"].assert_called_once_with(1000)
 
 
 class TestAudioRecorderGetAudioData:
