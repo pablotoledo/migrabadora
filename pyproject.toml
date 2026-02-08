@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "mp3recorder", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10,<3.15"
 sounddevice = "^0.5.0"
 numpy = ">=1.26.0"
 pydub = "^0.25.1"
@@ -20,6 +20,8 @@ pytest = "^8.3.0"
 pytest-cov = "^6.0.0"
 ruff = "^0.8.0"
 py2app = "^0.28.9"
+pyinstaller = "^6.11.0"
+
 
 [tool.poetry.scripts]
 mp3recorder = "mp3recorder.cli:main"
@@ -63,3 +65,5 @@ known-first-party = ["mp3recorder"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-v --tb=short"
+
+# ============ Briefcase configuration removed ============

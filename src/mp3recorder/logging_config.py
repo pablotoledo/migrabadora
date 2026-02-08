@@ -106,9 +106,9 @@ def log_startup_info() -> None:
     logger.info(f"macOS: {platform.mac_ver()[0]}")
 
     # Check for FFmpeg
-    import shutil
+    from mp3recorder.dependencies import get_ffmpeg_path
 
-    ffmpeg_path = shutil.which("ffmpeg")
+    ffmpeg_path = get_ffmpeg_path()
     if ffmpeg_path:
         logger.info(f"FFmpeg: {ffmpeg_path}")
     else:

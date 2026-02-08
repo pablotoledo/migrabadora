@@ -26,17 +26,18 @@ def list_audio_devices() -> list[AudioDevice]:
     default_input = sd.default.device[0]
 
     for idx, device in enumerate(sd.query_devices()):
-        # Only include input devices (max_input_channels > 0)
-        if device["max_input_channels"] > 0:
-            devices.append(
-                AudioDevice(
-                    index=idx,
-                    name=device["name"],
-                    channels=device["max_input_channels"],
-                    sample_rate=device["default_samplerate"],
-                    is_default=(idx == default_input),
-                )
+        # Include all devices, even if they report 0 input channels (user request)
+        # Some virtual devices or aggregates might report 0 but still work,
+        # or the user effectively wants to try them.
+        devices.append(
+            AudioDevice(
+                index=idx,
+                name=device["name"],
+                channels=device["max_input_channels"],
+                sample_rate=device["default_samplerate"],
+                is_default=(idx == default_input),
             )
+        )
 
     return devices
 

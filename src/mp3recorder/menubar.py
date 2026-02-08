@@ -257,11 +257,10 @@ class MP3RecorderMenuBar(rumps.App):
         try:
             if self.selected_device:
                 logger.debug(f"Selected device: {self.selected_device}")
-                if self.selected_device.channels < 1:
-                    raise RuntimeError(f"Device '{self.selected_device.name}' has 0 input channels.")
-
             # Create recorder with selected device and config settings
-            channels = self.selected_device.channels if self.selected_device else 2
+            # If channels is 0 (Multi-Output), try with 2 channels explicitly if needed by recorder logic,
+            # though PortAudio will likely complain.
+            channels = self.selected_device.channels if self.selected_device and self.selected_device.channels > 0 else 2
             sample_rate = int(self.selected_device.sample_rate) if self.selected_device else 44100
 
             self.recorder = AudioRecorder(
@@ -271,13 +270,29 @@ class MP3RecorderMenuBar(rumps.App):
                 bitrate=f"{self.config.bitrate}k",
             )
 
-            # Start recording (non-blocking)
-            self.recorder.start()
-
-            self.is_recording = True
-            self.start_time = time.time()
-
-            # Update menu
+            try:
+                # Start recording (non-blocking)
+                self.recorder.start()
+                self.is_recording = True
+                self.start_time = time.time()
+                
+                # Update menu
+                self.start_stop_item.title = "Stop Recording"
+                self.timer.start()
+                
+                logger.info("Recording started")
+                
+            except Exception as e:
+                logger.error(f"Failed to start recording: {e}")
+                rumps.alert(
+                    title="Recording Error",
+                    message=f"Could not start recording from '{self.selected_device.name}'.\n\n"
+                            f"Error: {str(e)}\n\n"
+                            "Note: Multi-Output devices are typically output-only. "
+                            "Try using BlackHole for system audio recording.",
+                )
+                self.recorder = None
+                return
             self.menu["Start Recording"].title = "Stop Recording"
             self.title = "🔴"
 

@@ -44,10 +44,16 @@ clean:
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 
 # Build the macOS app bundle (simple wrapper)
-build-app: clean
-	@echo "📦 Building MP3 Recorder.app..."
+build-app-wrapper: clean
+	@echo "📦 Building MP3 Recorder.app (wrapper)..."
 	chmod +x scripts/build_simple_app.sh
 	./scripts/build_simple_app.sh
+	@echo "✅ Build complete: dist/MP3 Recorder.app"
+
+# Build standalone app with PyInstaller
+build-app: clean
+	@echo "📦 Building MP3 Recorder.app with PyInstaller..."
+	poetry run pyinstaller "MP3 Recorder.spec" --noconfirm --clean
 	@echo "✅ Build complete: dist/MP3 Recorder.app"
 
 # Build app with py2app (currently broken on macOS 26)

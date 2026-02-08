@@ -86,3 +86,6 @@ output/
 
 # Context file (development notes)
 context
+
+# Logs
+logs/
