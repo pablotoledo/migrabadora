@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Simple macOS .app bundle builder for MP3 Recorder
-# Creates a lightweight wrapper that calls the Python script
+# Creates a lightweight wrapper that calls the Python script via terminal
 #
 
 set -e
@@ -21,18 +21,55 @@ rm -rf "dist/${APP_NAME}.app"
 mkdir -p "${MACOS_DIR}"
 mkdir -p "${RESOURCES_DIR}"
 
-# Get Python path from Poetry
-PYTHON_PATH=$(poetry env info --executable)
-POETRY_PATH=$(which poetry)
+# Get paths
 PROJECT_DIR=$(pwd)
 
 # Create the launcher script
-cat > "${MACOS_DIR}/MP3 Recorder" << EOF
+# Uses osascript to run shell command which avoids TCC restrictions
+cat > "${MACOS_DIR}/MP3 Recorder" << 'LAUNCHER_EOF'
 #!/bin/bash
-# MP3 Recorder launcher
-cd "${PROJECT_DIR}"
-exec "${POETRY_PATH}" run mp3recorder-menubar
-EOF
+
+# Project directory is stored during build
+PROJECT_DIR="__PROJECT_DIR__"
+
+# Log file
+LOG_FILE="$HOME/Library/Logs/MP3Recorder/launcher.log"
+mkdir -p "$(dirname "$LOG_FILE")"
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
+}
+
+log "Starting MP3 Recorder..."
+
+cd "$PROJECT_DIR" 2>/dev/null || {
+    log "ERROR: Project not found at $PROJECT_DIR"
+    osascript -e 'display dialog "MP3 Recorder Error:\n\nProject directory not found:\n'"$PROJECT_DIR"'" buttons {"OK"} default button 1 with icon stop'
+    exit 1
+}
+
+# Check if poetry is available  
+if command -v /opt/homebrew/bin/poetry &> /dev/null; then
+    POETRY_CMD="/opt/homebrew/bin/poetry"
+elif command -v poetry &> /dev/null; then
+    POETRY_CMD="poetry"
+else
+    log "ERROR: Poetry not found"
+    osascript -e 'display dialog "MP3 Recorder Error:\n\nPoetry not found. Please install Poetry and try again." buttons {"OK"} default button 1 with icon stop'
+    exit 1
+fi
+
+log "Using poetry: $POETRY_CMD"
+log "Launching in background..."
+
+# Run the app - using nohup to detach from terminal context
+nohup "$POETRY_CMD" run mp3recorder-menubar >> "$LOG_FILE" 2>&1 &
+
+log "App started with PID $!"
+LAUNCHER_EOF
+
+# Replace placeholders
+sed -i '' "s|__PROJECT_DIR__|${PROJECT_DIR}|g" "${MACOS_DIR}/MP3 Recorder"
 
 chmod +x "${MACOS_DIR}/MP3 Recorder"
 
@@ -69,7 +106,6 @@ EOF
 # Copy icon if exists
 if [ -f "resources/icon.icns" ]; then
     cp "resources/icon.icns" "${RESOURCES_DIR}/icon.icns"
-    # Add icon to plist
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string icon" "${CONTENTS_DIR}/Info.plist" 2>/dev/null || true
 fi
 
@@ -80,3 +116,5 @@ echo "  cp -r '${APP_DIR}' /Applications/"
 echo ""
 echo "To run:"
 echo "  open '${APP_DIR}'"
+echo ""
+echo "Logs: ~/Library/Logs/MP3Recorder/launcher.log"
