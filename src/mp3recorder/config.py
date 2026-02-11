@@ -53,18 +53,20 @@ class AppConfig:
         # Validate bitrate
         valid_bitrates = [128, 192, 256, 320]
         if self.bitrate not in valid_bitrates:
-            logger.warning(f"Invalid bitrate {self.bitrate}, defaulting to 192")
+            logger.warning("Invalid bitrate %s, defaulting to 192", self.bitrate)
             self.bitrate = 192
 
         # Validate channels
         if self.channels not in [1, 2]:
-            logger.warning(f"Invalid channels {self.channels}, defaulting to 2")
+            logger.warning("Invalid channels %s, defaulting to 2", self.channels)
             self.channels = 2
 
         # Validate sample rate
         valid_sample_rates = [44100, 48000, 96000]
         if self.sample_rate not in valid_sample_rates:
-            logger.warning(f"Invalid sample rate {self.sample_rate}, defaulting to 44100")
+            logger.warning(
+                "Invalid sample rate %s, defaulting to 44100", self.sample_rate
+            )
             self.sample_rate = 44100
 
 
@@ -88,7 +90,7 @@ def load() -> AppConfig:
         return get_default_config()
 
     try:
-        with open(CONFIG_FILE, encoding="utf-8") as f:
+        with CONFIG_FILE.open(encoding="utf-8") as f:
             data = json.load(f)
 
         # Handle migration if needed
@@ -99,11 +101,11 @@ def load() -> AppConfig:
         filtered_data = {k: v for k, v in data.items() if k in known_keys}
 
         config = AppConfig(**filtered_data)
-        logger.debug(f"Loaded config from {CONFIG_FILE}")
+        logger.debug("Loaded config from %s", CONFIG_FILE)
         return config
 
     except (json.JSONDecodeError, TypeError, ValueError) as e:
-        logger.error(f"Failed to load config, using defaults: {e}")
+        logger.error("Failed to load config, using defaults: %s", e)
         return get_default_config()
 
 
@@ -117,11 +119,11 @@ def save(config: AppConfig) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
     try:
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        with CONFIG_FILE.open("w", encoding="utf-8") as f:
             json.dump(asdict(config), f, indent=2)
-        logger.debug(f"Saved config to {CONFIG_FILE}")
+        logger.debug("Saved config to %s", CONFIG_FILE)
     except OSError as e:
-        logger.error(f"Failed to save config: {e}")
+        logger.error("Failed to save config: %s", e)
         raise
 
 
@@ -149,7 +151,7 @@ def _migrate_config(data: dict[str, Any]) -> dict[str, Any]:
     version = data.get("config_version", 0)
 
     if version < CONFIG_VERSION:
-        logger.info(f"Migrating config from version {version} to {CONFIG_VERSION}")
+        logger.info("Migrating config from version %s to %s", version, CONFIG_VERSION)
 
         # Add migration logic here as needed for future versions
         # Example:
@@ -188,13 +190,13 @@ def delete_config() -> bool:
     try:
         if CONFIG_FILE.exists():
             CONFIG_FILE.unlink()
-            logger.info(f"Deleted config file: {CONFIG_FILE}")
+            logger.info("Deleted config file: %s", CONFIG_FILE)
 
         if CONFIG_DIR.exists() and not any(CONFIG_DIR.iterdir()):
             CONFIG_DIR.rmdir()
-            logger.info(f"Deleted config directory: {CONFIG_DIR}")
+            logger.info("Deleted config directory: %s", CONFIG_DIR)
 
         return True
     except OSError as e:
-        logger.error(f"Failed to delete config: {e}")
+        logger.error("Failed to delete config: %s", e)
         return False

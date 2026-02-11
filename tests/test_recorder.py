@@ -97,7 +97,9 @@ class TestAudioRecorderGetAudioData:
 
         assert recorder.get_audio_data() is None
 
-    def test_returns_audio_data_after_recording(self, mock_sounddevice, mock_audio_data):
+    def test_returns_audio_data_after_recording(
+        self, mock_sounddevice, mock_audio_data
+    ):
         """Should return audio data after recording."""
         recorder = AudioRecorder()
         recorder.record(duration=1.0)

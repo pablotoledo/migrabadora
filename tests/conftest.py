@@ -82,17 +82,18 @@ class MockInputStream:
 @pytest.fixture
 def mock_sounddevice(mock_devices, mock_audio_data):
     """Patch sounddevice module for testing.
-    
+
     This fixture mocks both the old sd.rec() API and the new InputStream API
     used by the start/stop recording methods.
     """
-    with patch("sounddevice.query_devices") as mock_query, \
-         patch("sounddevice.default", new=MagicMock()) as mock_default, \
-         patch("sounddevice.rec") as mock_rec, \
-         patch("sounddevice.wait") as mock_wait, \
-         patch("sounddevice.sleep") as mock_sleep, \
-         patch("sounddevice.InputStream") as mock_input_stream:
-
+    with (
+        patch("sounddevice.query_devices") as mock_query,
+        patch("sounddevice.default", new=MagicMock()) as mock_default,
+        patch("sounddevice.rec") as mock_rec,
+        patch("sounddevice.wait") as mock_wait,
+        patch("sounddevice.sleep") as mock_sleep,
+        patch("sounddevice.InputStream") as mock_input_stream,
+    ):
         mock_query.return_value = mock_devices
         mock_default.device = (0, 0)  # Default input and output device indices
         mock_rec.return_value = mock_audio_data
@@ -101,10 +102,9 @@ def mock_sounddevice(mock_devices, mock_audio_data):
         def create_mock_stream(**kwargs):
             callback = kwargs.pop("callback", None)
             return MockInputStream(
-                callback=callback,
-                audio_data=mock_audio_data,
-                **kwargs
+                callback=callback, audio_data=mock_audio_data, **kwargs
             )
+
         mock_input_stream.side_effect = create_mock_stream
 
         yield {

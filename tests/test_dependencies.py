@@ -4,24 +4,20 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
+import mp3recorder.dependencies as deps_module
 from mp3recorder.dependencies import (
     check_blackhole,
     check_ffmpeg,
     copy_to_clipboard,
     get_blackhole_install_instructions,
     get_blackhole_url,
-    get_bundled_ffmpeg,
     get_ffmpeg_clipboard_command,
     get_ffmpeg_install_instructions,
-    get_ffmpeg_path,
     get_ffmpeg_version,
     get_system_info,
     open_path,
     open_url,
 )
-import mp3recorder.dependencies as deps_module
 
 
 class TestCheckFfmpeg:
@@ -43,8 +39,10 @@ class TestCheckFfmpeg:
 
     def test_returns_true_when_system_found(self):
         """Should return True when system FFmpeg is found (no bundled)."""
-        with patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled, \
-             patch("shutil.which") as mock_which:
+        with (
+            patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled,
+            patch("shutil.which") as mock_which,
+        ):
             mock_bundled.return_value = None
             mock_which.return_value = "/usr/local/bin/ffmpeg"
 
@@ -56,8 +54,10 @@ class TestCheckFfmpeg:
 
     def test_returns_false_when_not_found(self):
         """Should return False and None when FFmpeg is not found."""
-        with patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled, \
-             patch("shutil.which") as mock_which:
+        with (
+            patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled,
+            patch("shutil.which") as mock_which,
+        ):
             mock_bundled.return_value = None
             mock_which.return_value = None
 
@@ -146,9 +146,11 @@ class TestGetSystemInfo:
 
     def test_returns_dict_with_expected_keys(self):
         """Should return dict with all expected keys."""
-        with patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled, \
-             patch("shutil.which") as mock_which, \
-             patch("sounddevice.query_devices") as mock_query:
+        with (
+            patch("mp3recorder.dependencies.get_bundled_ffmpeg") as mock_bundled,
+            patch("shutil.which") as mock_which,
+            patch("sounddevice.query_devices") as mock_query,
+        ):
             mock_bundled.return_value = None
             mock_which.return_value = "/usr/local/bin/ffmpeg"
             mock_query.return_value = []
@@ -229,7 +231,9 @@ class TestOpenUrl:
             result = open_url("https://example.com")
 
             assert result is True
-            mock_run.assert_called_once_with(["open", "https://example.com"], check=True)
+            mock_run.assert_called_once_with(
+                ["open", "https://example.com"], check=True
+            )
 
     def test_returns_false_on_error(self):
         """Should return False on error."""

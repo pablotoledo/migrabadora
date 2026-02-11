@@ -14,22 +14,27 @@ import rumps
 
 # Try to import AppKit for bringing app to front (may not be available in all envs)
 try:
-    from AppKit import NSApplication, NSApplicationActivateIgnoringOtherApps
+    from AppKit import NSApplication
+
     HAS_APPKIT = True
 except ImportError:
     HAS_APPKIT = False
 
 from mp3recorder import __version__
-from mp3recorder.config import AppConfig, load as load_config, save as save_config
+from mp3recorder.config import load as load_config
+from mp3recorder.config import save as save_config
 from mp3recorder.dependencies import (
-    copy_to_clipboard,
     get_blackhole_install_instructions,
     get_blackhole_url,
     open_path,
     open_url,
 )
 from mp3recorder.devices import AudioDevice, get_default_device, list_audio_devices
-from mp3recorder.logging_config import get_log_directory, log_startup_info, setup_logging
+from mp3recorder.logging_config import (
+    get_log_directory,
+    log_startup_info,
+    setup_logging,
+)
 from mp3recorder.recorder import AudioRecorder
 from mp3recorder.startup import (
     get_uninstall_summary,
@@ -54,7 +59,9 @@ class MP3RecorderMenuBar(rumps.App):
 
         # Load configuration
         self.config = load_config()
-        logger.debug(f"Loaded config: bitrate={self.config.bitrate}, output={self.config.output_folder}")
+        logger.debug(
+            f"Loaded config: bitrate={self.config.bitrate}, output={self.config.output_folder}"
+        )
 
         # Recording state
         self.is_recording = False
@@ -99,21 +106,29 @@ class MP3RecorderMenuBar(rumps.App):
     def _build_menu(self) -> None:
         """Build the menu bar menu."""
         # Get output folder display name (shorten if too long)
-        folder_name = self.output_folder.name if len(str(self.output_folder)) > 30 else str(self.output_folder)
+        folder_name = (
+            self.output_folder.name
+            if len(str(self.output_folder)) > 30
+            else str(self.output_folder)
+        )
 
         self.menu = [
             rumps.MenuItem("Start Recording", callback=self._toggle_recording),
             None,  # Separator
             self._create_device_menu(),
             self._create_quality_menu(),
-            rumps.MenuItem(f"Output Folder: {folder_name}", callback=self._choose_folder),
+            rumps.MenuItem(
+                f"Output Folder: {folder_name}", callback=self._choose_folder
+            ),
             None,  # Separator
             self._create_recent_recordings_menu(),
             None,  # Separator
             self._create_start_at_login_item(),
             self._create_setup_guide_menu(),
             None,  # Separator
-            rumps.MenuItem(f"About MP3 Recorder v{__version__}", callback=self._show_about),
+            rumps.MenuItem(
+                f"About MP3 Recorder v{__version__}", callback=self._show_about
+            ),
             rumps.MenuItem("Uninstall MP3 Recorder...", callback=self._show_uninstall),
             rumps.MenuItem("Quit", callback=self._quit),
         ]
@@ -174,9 +189,13 @@ class MP3RecorderMenuBar(rumps.App):
         """Create the setup guide submenu."""
         setup_menu = rumps.MenuItem("Help")
 
-        setup_menu.add(rumps.MenuItem("Setup BlackHole...", callback=self._show_blackhole_help))
+        setup_menu.add(
+            rumps.MenuItem("Setup BlackHole...", callback=self._show_blackhole_help)
+        )
         setup_menu.add(None)  # Separator
-        setup_menu.add(rumps.MenuItem("Open Logs Folder", callback=self._open_logs_folder))
+        setup_menu.add(
+            rumps.MenuItem("Open Logs Folder", callback=self._open_logs_folder)
+        )
 
         return setup_menu
 
@@ -195,13 +214,18 @@ class MP3RecorderMenuBar(rumps.App):
         self.config.default_device = device.name
         save_config(self.config)
 
-        # Update menu checkmarks
-        parent = sender.parent if hasattr(sender, "parent") else None
-        if parent:
-            for item in parent.values():
-                if isinstance(item, rumps.MenuItem):
+        # Update menu checkmarks (exclusive selection)
+        # We access the menu item directly to ensure we get the right parent
+        try:
+            device_menu = self.menu["Select Device"]
+            for item in device_menu.values():
+                if hasattr(item, "state"):
                     item.state = 0
-        sender.state = 1
+            sender.state = 1
+        except Exception as e:
+            logger.error(f"Error updating menu state: {e}")
+            # Fallback attempts
+            sender.state = 1
 
     def _select_bitrate(self, sender: rumps.MenuItem, bitrate: int) -> None:
         """Handle bitrate selection."""
@@ -209,13 +233,16 @@ class MP3RecorderMenuBar(rumps.App):
         save_config(self.config)
         logger.info(f"Selected bitrate: {bitrate}k")
 
-        # Update menu checkmarks
-        parent = sender.parent if hasattr(sender, "parent") else None
-        if parent:
-            for item in parent.values():
-                if isinstance(item, rumps.MenuItem):
+        # Update menu checkmarks (exclusive selection)
+        try:
+            quality_menu = self.menu["Audio Quality"]
+            for item in quality_menu.values():
+                if hasattr(item, "state"):
                     item.state = 0
-        sender.state = 1
+            sender.state = 1
+        except Exception as e:
+            logger.error(f"Error updating quality menu state: {e}")
+            sender.state = 1
 
     def _toggle_start_at_login(self, sender: rumps.MenuItem) -> None:
         """Toggle the Start at Login setting."""
@@ -257,11 +284,47 @@ class MP3RecorderMenuBar(rumps.App):
         try:
             if self.selected_device:
                 logger.debug(f"Selected device: {self.selected_device}")
+
+                # SMART SWITCH: If Multi-Output (0 inputs) is selected, try to find BlackHole automatically.
+                # The user wants to record the output, which means they should be listening on the BlackHole input.
+                if self.selected_device.channels < 1:
+                    logger.info("Attempting smart switch for Multi-Output device")
+                    devices = list_audio_devices()
+                    blackhole = next(
+                        (d for d in devices if "BlackHole" in d.name), None
+                    )
+
+                    if blackhole:
+                        logger.info(
+                            f"Switching from '{self.selected_device.name}' to '{blackhole.name}'"
+                        )
+                        # Notify user non-intrusively
+                        rumps.notification(
+                            title="Audio Routing Auto-Switch",
+                            subtitle=f"Using {blackhole.name}",
+                            message="Multi-Output sends audio. BlackHole receives it. Recording from BlackHole.",
+                        )
+                        # Update selection
+                        self.selected_device = blackhole
+                        # Update config persistent
+                        self.config.default_device = blackhole.name
+                        save_config(self.config)
+                        # Update visual menu state
+                        try:
+                            device_menu = self.menu["Select Device"]
+                            for item in device_menu.values():
+                                if hasattr(item, "state"):
+                                    item.state = 0
+                                if item.title == blackhole.name:
+                                    item.state = 1
+                        except Exception as exc:
+                            logger.warning(f"Could not update menu visuals: {exc}")
+
             # Create recorder with selected device and config settings
-            # If channels is 0 (Multi-Output), try with 2 channels explicitly if needed by recorder logic,
-            # though PortAudio will likely complain.
-            channels = self.selected_device.channels if self.selected_device and self.selected_device.channels > 0 else 2
-            sample_rate = int(self.selected_device.sample_rate) if self.selected_device else 44100
+            channels = self.selected_device.channels if self.selected_device else 2
+            sample_rate = (
+                int(self.selected_device.sample_rate) if self.selected_device else 44100
+            )
 
             self.recorder = AudioRecorder(
                 device=self.selected_device.index if self.selected_device else None,
@@ -275,21 +338,21 @@ class MP3RecorderMenuBar(rumps.App):
                 self.recorder.start()
                 self.is_recording = True
                 self.start_time = time.time()
-                
+
                 # Update menu
-                self.start_stop_item.title = "Stop Recording"
+                self.menu["Start Recording"].title = "Stop Recording"
                 self.timer.start()
-                
+
                 logger.info("Recording started")
-                
+
             except Exception as e:
                 logger.error(f"Failed to start recording: {e}")
                 rumps.alert(
                     title="Recording Error",
                     message=f"Could not start recording from '{self.selected_device.name}'.\n\n"
-                            f"Error: {str(e)}\n\n"
-                            "Note: Multi-Output devices are typically output-only. "
-                            "Try using BlackHole for system audio recording.",
+                    f"Error: {e!s}\n\n"
+                    "Note: Multi-Output devices are typically output-only. "
+                    "Try using BlackHole for system audio recording.",
                 )
                 self.recorder = None
                 return
@@ -458,7 +521,8 @@ class MP3RecorderMenuBar(rumps.App):
 
         response = rumps.alert(
             title="Setup BlackHole",
-            message=instructions[:500] + "...\n\n(Full instructions on website)",  # Truncate for alert
+            message=instructions[:500]
+            + "...\n\n(Full instructions on website)",  # Truncate for alert
             ok="Open Website",
             cancel="Close",
         )
@@ -528,7 +592,7 @@ A simple menu bar app for recording audio on macOS.
                 rumps.alert(
                     "Uninstall Complete",
                     "All MP3 Recorder data has been removed.\n\n"
-                    "You can now move the application to Trash."
+                    "You can now move the application to Trash.",
                 )
                 rumps.quit_application()
             else:
@@ -536,7 +600,7 @@ A simple menu bar app for recording audio on macOS.
                 rumps.alert(
                     "Uninstall Warning",
                     f"Some items could not be removed: {', '.join(failed)}\n\n"
-                    "You may need to remove them manually."
+                    "You may need to remove them manually.",
                 )
 
     def _quit(self, _: rumps.MenuItem) -> None:

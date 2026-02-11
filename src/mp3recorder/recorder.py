@@ -16,6 +16,7 @@ def _configure_ffmpeg() -> None:
     """Configure pydub to use bundled FFmpeg if available."""
     try:
         from mp3recorder.dependencies import get_ffmpeg_path
+
         ffmpeg_path = get_ffmpeg_path()
         if ffmpeg_path:
             AudioSegment.converter = ffmpeg_path
@@ -23,9 +24,9 @@ def _configure_ffmpeg() -> None:
             ffprobe = Path(ffmpeg_path).parent / "ffprobe"
             if ffprobe.exists():
                 AudioSegment.ffprobe = str(ffprobe)
-            logger.debug(f"Configured pydub to use FFmpeg: {ffmpeg_path}")
+            logger.debug("Configured pydub to use FFmpeg: %s", ffmpeg_path)
     except Exception as e:
-        logger.debug(f"Could not configure bundled FFmpeg: {e}")
+        logger.debug("Could not configure bundled FFmpeg: %s", e)
 
 
 # Configure FFmpeg on module import
@@ -62,7 +63,7 @@ class AudioRecorder:
         """Start indefinite recording."""
         self._frames = []
         self._audio_data = None
-        
+
         try:
             self._stream = sd.InputStream(
                 samplerate=self.sample_rate,
@@ -81,18 +82,20 @@ class AudioRecorder:
             self._stream.stop()
             self._stream.close()
             self._stream = None
-        
+
         if self._frames:
             self._audio_data = np.concatenate(self._frames)
         else:
             self._audio_data = np.zeros((0, self.channels), dtype=np.float32)
-            
+
         return self._audio_data
 
-    def _callback(self, indata: np.ndarray, _frames: int, _time, status: sd.CallbackFlags) -> None:
+    def _callback(
+        self, indata: np.ndarray, _frames: int, _time, status: sd.CallbackFlags
+    ) -> None:
         """Callback for collecting audio frames."""
         if status:
-            logger.warning(f"Recording status: {status}")
+            logger.warning("Recording status: %s", status)
         self._frames.append(indata.copy())
 
     def record(self, duration: float) -> np.ndarray:

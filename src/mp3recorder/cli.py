@@ -26,7 +26,8 @@ def cmd_list_devices(_args: argparse.Namespace) -> int:
     for device in devices:
         default_marker = " (default)" if device.is_default else ""
         print(f"  [{device.index}] {device.name}{default_marker}")
-        print(f"      Channels: {device.channels}, Sample Rate: {device.sample_rate:.0f} Hz")
+        msg = f"      Channels: {device.channels}, Sample Rate: {device.sample_rate:.0f} Hz"
+        print(msg)
 
     print("-" * 60)
     print(f"Total: {len(devices)} device(s)\n")
@@ -77,7 +78,8 @@ def cmd_record(args: argparse.Namespace) -> int:
         # Show elapsed time during recording
         while time.time() - start_time < args.duration:
             elapsed = time.time() - start_time
-            print(f"\rRecording... {elapsed:.1f}s / {args.duration}s", end="", flush=True)
+            msg = f"\rRecording... {elapsed:.1f}s / {args.duration}s"
+            print(msg, end="", flush=True)
             time.sleep(0.1)
 
         print(f"\rRecording... {args.duration}s / {args.duration}s ✓")
@@ -92,6 +94,7 @@ def cmd_record(args: argparse.Namespace) -> int:
         output_path = recorder.save_mp3(args.output)
         print("✓")
         print(f"\n✅ Saved to: {output_path.absolute()}\n")
+
     except RuntimeError as e:
         print(f"\n\nError: {e}")
         return 1
@@ -121,13 +124,15 @@ def create_parser() -> argparse.ArgumentParser:
         help="Record audio to MP3 file",
     )
     record_parser.add_argument(
-        "-d", "--duration",
+        "-d",
+        "--duration",
         type=float,
         required=True,
         help="Recording duration in seconds",
     )
     record_parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         type=str,
         required=True,
         help="Output MP3 file path",

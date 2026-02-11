@@ -25,12 +25,13 @@ def get_bundled_ffmpeg() -> str | None:
     """
     try:
         import imageio_ffmpeg
+
         ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
         if ffmpeg_path and Path(ffmpeg_path).exists():
-            logger.debug(f"Bundled FFmpeg found at: {ffmpeg_path}")
+            logger.debug("Bundled FFmpeg found at: %s", ffmpeg_path)
             return ffmpeg_path
     except (ImportError, Exception) as e:
-        logger.debug(f"imageio-ffmpeg not available: {e}")
+        logger.debug("imageio-ffmpeg not available: %s", e)
     return None
 
 
@@ -59,7 +60,7 @@ def get_ffmpeg_path() -> str | None:
     system_ffmpeg = shutil.which("ffmpeg")
     if system_ffmpeg:
         _ffmpeg_path_cache = system_ffmpeg
-        logger.debug(f"System FFmpeg found at: {system_ffmpeg}")
+        logger.debug("System FFmpeg found at: %s", system_ffmpeg)
         return system_ffmpeg
 
     return None
@@ -95,14 +96,14 @@ def check_blackhole() -> tuple[bool, str | None]:
         for device in devices:
             if "blackhole" in device["name"].lower():
                 device_name = device["name"]
-                logger.debug(f"BlackHole device found: {device_name}")
+                logger.debug("BlackHole device found: %s", device_name)
                 return True, device_name
 
         logger.info("BlackHole device not found")
         return False, None
 
     except Exception as e:
-        logger.error(f"Error checking for BlackHole: {e}")
+        logger.error("Error checking for BlackHole: %s", e)
         return False, None
 
 
@@ -207,7 +208,8 @@ Step 3: In MP3 Recorder
 2. Now you can record system audio!
 
 Note: You won't hear audio while using Multi-Output Device.
-To hear audio again, right-click your regular speakers and select "Use This Device For Sound Output".
+To hear audio again, right-click your regular speakers
+and select "Use This Device For Sound Output".
 """
 
 
@@ -247,7 +249,7 @@ def copy_to_clipboard(text: str) -> bool:
         logger.debug("Copied to clipboard")
         return True
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
-        logger.error(f"Failed to copy to clipboard: {e}")
+        logger.error("Failed to copy to clipboard: %s", e)
         return False
 
 
@@ -262,10 +264,10 @@ def open_url(url: str) -> bool:
     """
     try:
         subprocess.run(["open", url], check=True)
-        logger.debug(f"Opened URL: {url}")
+        logger.debug("Opened URL: %s", url)
         return True
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
-        logger.error(f"Failed to open URL: {e}")
+        logger.error("Failed to open URL: %s", e)
         return False
 
 
@@ -280,8 +282,8 @@ def open_path(path: Path | str) -> bool:
     """
     try:
         subprocess.run(["open", str(path)], check=True)
-        logger.debug(f"Opened path: {path}")
+        logger.debug("Opened path: %s", path)
         return True
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
-        logger.error(f"Failed to open path: {e}")
+        logger.error("Failed to open path: %s", e)
         return False

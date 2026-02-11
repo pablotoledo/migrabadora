@@ -69,7 +69,9 @@ def install_launch_agent(app_path: str | Path | None = None) -> bool:
             import sys
 
             executable = Path(sys.executable)
-            logger.warning("Could not find mp3recorder-menubar script, using Python executable")
+            logger.warning(
+                "Could not find mp3recorder-menubar script, using Python executable"
+            )
 
     plist_content = {
         "Label": LAUNCH_AGENT_LABEL,
@@ -83,11 +85,11 @@ def install_launch_agent(app_path: str | Path | None = None) -> bool:
         LAUNCH_AGENTS_DIR.mkdir(parents=True, exist_ok=True)
 
         # Write the plist file
-        with open(LAUNCH_AGENT_PATH, "wb") as f:
+        with LAUNCH_AGENT_PATH.open("wb") as f:
             plistlib.dump(plist_content, f)
 
-        logger.info(f"Installed LaunchAgent at: {LAUNCH_AGENT_PATH}")
-        logger.debug(f"Executable path: {executable}")
+        logger.info("Installed LaunchAgent at: %s", LAUNCH_AGENT_PATH)
+        logger.debug("Executable path: %s", executable)
 
         # Load the agent (optional, it will load on next login anyway)
         try:
@@ -99,12 +101,12 @@ def install_launch_agent(app_path: str | Path | None = None) -> bool:
             logger.debug("LaunchAgent loaded successfully")
         except subprocess.CalledProcessError as e:
             # Not critical - will load on next login
-            logger.debug(f"Could not load LaunchAgent immediately: {e}")
+            logger.debug("Could not load LaunchAgent immediately: %s", e)
 
         return True
 
     except (OSError, PermissionError) as e:
-        logger.error(f"Failed to install LaunchAgent: {e}")
+        logger.error("Failed to install LaunchAgent: %s", e)
         return False
 
 
@@ -129,16 +131,16 @@ def uninstall_launch_agent() -> bool:
             logger.debug("LaunchAgent unloaded successfully")
         except subprocess.CalledProcessError as e:
             # Not critical - might not be loaded
-            logger.debug(f"Could not unload LaunchAgent: {e}")
+            logger.debug("Could not unload LaunchAgent: %s", e)
 
         # Remove the plist file
         LAUNCH_AGENT_PATH.unlink()
-        logger.info(f"Uninstalled LaunchAgent: {LAUNCH_AGENT_PATH}")
+        logger.info("Uninstalled LaunchAgent: %s", LAUNCH_AGENT_PATH)
 
         return True
 
     except (OSError, PermissionError) as e:
-        logger.error(f"Failed to uninstall LaunchAgent: {e}")
+        logger.error("Failed to uninstall LaunchAgent: %s", e)
         return False
 
 
@@ -152,7 +154,7 @@ def get_launch_agent_executable() -> str | None:
         return None
 
     try:
-        with open(LAUNCH_AGENT_PATH, "rb") as f:
+        with LAUNCH_AGENT_PATH.open("rb") as f:
             plist = plistlib.load(f)
 
         args = plist.get("ProgramArguments", [])
@@ -161,11 +163,13 @@ def get_launch_agent_executable() -> str | None:
         return None
 
     except (OSError, plistlib.InvalidFileException) as e:
-        logger.error(f"Failed to read LaunchAgent: {e}")
+        logger.error("Failed to read LaunchAgent: %s", e)
         return None
 
 
-def uninstall_app(remove_config: bool = True, remove_logs: bool = True) -> dict[str, bool]:
+def uninstall_app(
+    remove_config: bool = True, remove_logs: bool = True
+) -> dict[str, bool]:
     """Completely uninstall the MP3 Recorder application data.
 
     This removes:
@@ -199,11 +203,12 @@ def uninstall_app(remove_config: bool = True, remove_logs: bool = True) -> dict[
         try:
             if CONFIG_DIR.exists():
                 import shutil
+
                 shutil.rmtree(CONFIG_DIR)
-                logger.info(f"Removed config directory: {CONFIG_DIR}")
+                logger.info("Removed config directory: %s", CONFIG_DIR)
             results["config"] = True
         except (OSError, PermissionError) as e:
-            logger.error(f"Failed to remove config directory: {e}")
+            logger.error("Failed to remove config directory: %s", e)
             results["config"] = False
     else:
         results["config"] = True
@@ -213,11 +218,12 @@ def uninstall_app(remove_config: bool = True, remove_logs: bool = True) -> dict[
         try:
             if LOG_DIR.exists():
                 import shutil
+
                 shutil.rmtree(LOG_DIR)
-                logger.info(f"Removed logs directory: {LOG_DIR}")
+                logger.info("Removed logs directory: %s", LOG_DIR)
             results["logs"] = True
         except (OSError, PermissionError) as e:
-            logger.error(f"Failed to remove logs directory: {e}")
+            logger.error("Failed to remove logs directory: %s", e)
             results["logs"] = False
     else:
         results["logs"] = True
@@ -249,4 +255,3 @@ def get_uninstall_summary() -> str:
         return "The following will be removed:\n\n" + "\n".join(items)
     else:
         return "No MP3 Recorder data found to remove."
-

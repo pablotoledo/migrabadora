@@ -78,7 +78,7 @@ class TestInstallLaunchAgent:
 
             import mp3recorder.startup as startup
 
-            with open(startup.LAUNCH_AGENT_PATH, "rb") as f:
+            with startup.LAUNCH_AGENT_PATH.open("rb") as f:
                 plist = plistlib.load(f)
 
             assert plist["Label"] == LAUNCH_AGENT_LABEL
@@ -90,7 +90,7 @@ class TestInstallLaunchAgent:
 
             import mp3recorder.startup as startup
 
-            with open(startup.LAUNCH_AGENT_PATH, "rb") as f:
+            with startup.LAUNCH_AGENT_PATH.open("rb") as f:
                 plist = plistlib.load(f)
 
             assert plist["RunAtLoad"] is True
@@ -131,7 +131,7 @@ class TestUninstallLaunchAgent:
             "ProgramArguments": ["/path/to/app"],
             "RunAtLoad": True,
         }
-        with open(startup.LAUNCH_AGENT_PATH, "wb") as f:
+        with startup.LAUNCH_AGENT_PATH.open("wb") as f:
             plistlib.dump(plist_content, f)
 
         with patch("subprocess.run"):
@@ -152,7 +152,7 @@ class TestUninstallLaunchAgent:
 
         # Create a plist file
         plist_content = {"Label": LAUNCH_AGENT_LABEL, "ProgramArguments": ["/test"]}
-        with open(startup.LAUNCH_AGENT_PATH, "wb") as f:
+        with startup.LAUNCH_AGENT_PATH.open("wb") as f:
             plistlib.dump(plist_content, f)
 
         with patch("subprocess.run") as mock_run:
@@ -194,7 +194,7 @@ class TestGetLaunchAgentExecutable:
             "Label": LAUNCH_AGENT_LABEL,
             "ProgramArguments": ["/path/to/executable", "--arg"],
         }
-        with open(startup.LAUNCH_AGENT_PATH, "wb") as f:
+        with startup.LAUNCH_AGENT_PATH.open("wb") as f:
             plistlib.dump(plist_content, f)
 
         result = get_launch_agent_executable()

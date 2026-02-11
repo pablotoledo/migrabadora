@@ -1,15 +1,12 @@
 """Unit tests for the logging_config module."""
 
 import logging
-import os
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from mp3recorder.logging_config import (
-    LOG_DIR,
-    LOG_FILE,
     get_log_directory,
     get_log_file,
     get_logger,
@@ -71,7 +68,9 @@ class TestSetupLogging:
 
         logger = logging.getLogger("mp3recorder")
         file_handlers = [
-            h for h in logger.handlers if isinstance(h, logging.handlers.RotatingFileHandler)
+            h
+            for h in logger.handlers
+            if isinstance(h, logging.handlers.RotatingFileHandler)
         ]
         assert len(file_handlers) == 1
 
@@ -106,7 +105,9 @@ class TestSetupLogging:
 
         logger = logging.getLogger("mp3recorder")
         file_handlers = [
-            h for h in logger.handlers if isinstance(h, logging.handlers.RotatingFileHandler)
+            h
+            for h in logger.handlers
+            if isinstance(h, logging.handlers.RotatingFileHandler)
         ]
         assert len(file_handlers) == 1
 
@@ -162,8 +163,8 @@ class TestLogStartupInfo:
         """Should warn when FFmpeg is not found."""
         setup_logging()
 
-        with patch("shutil.which") as mock_which:
-            mock_which.return_value = None
+        with patch("mp3recorder.dependencies.get_ffmpeg_path") as mock_get_path:
+            mock_get_path.return_value = None
             log_startup_info()
 
         import mp3recorder.logging_config as lc

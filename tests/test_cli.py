@@ -69,7 +69,9 @@ class TestCmdListDevices:
 class TestCmdRecord:
     """Tests for cmd_record function."""
 
-    def test_record_with_default_device(self, mock_sounddevice, mock_audio_data, tmp_path):
+    def test_record_with_default_device(
+        self, mock_sounddevice, mock_audio_data, tmp_path
+    ):
         """Should record with default device."""
         output_file = tmp_path / "test.mp3"
 
@@ -92,7 +94,9 @@ class TestCmdRecord:
             assert result == 0
             mock_recorder.record.assert_called_once_with(1.0)
 
-    def test_record_with_named_device(self, mock_sounddevice, mock_audio_data, tmp_path):
+    def test_record_with_named_device(
+        self, mock_sounddevice, mock_audio_data, tmp_path
+    ):
         """Should record with specified device."""
         output_file = tmp_path / "test.mp3"
 

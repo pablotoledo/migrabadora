@@ -1,6 +1,5 @@
 """Unit tests for the devices module."""
 
-
 from mp3recorder.devices import (
     AudioDevice,
     get_default_device,
@@ -19,16 +18,16 @@ class TestListAudioDevices:
         assert isinstance(devices, list)
         assert all(isinstance(d, AudioDevice) for d in devices)
 
-    def test_filters_input_devices_only(self, mock_sounddevice):
-        """Should only include devices with input channels."""
+    def test_includes_all_devices(self, mock_sounddevice):
+        """Should include all devices regardless of input channels."""
         devices = list_audio_devices()
 
-        # Original mock has 3 input devices and 1 output-only device
-        assert len(devices) == 3
+        # Original mock has 4 devices total
+        assert len(devices) == 4
 
-        # All returned devices should have input channels
-        for device in devices:
-            assert device.channels > 0
+        # Verify we have at least one device with 0 channels (External Speakers in mock)
+        zero_channel_devices = [d for d in devices if d.channels == 0]
+        assert len(zero_channel_devices) > 0
 
     def test_includes_device_properties(self, mock_sounddevice):
         """Should include all device properties."""

@@ -101,16 +101,16 @@ def log_startup_info() -> None:
 
     logger.info("=" * 50)
     logger.info("MP3 Recorder starting up")
-    logger.info(f"Version: {__version__}")
-    logger.info(f"Python: {sys.version}")
-    logger.info(f"macOS: {platform.mac_ver()[0]}")
+    logger.info("Version: %s", __version__)
+    logger.info("Python: %s", sys.version)
+    logger.info("macOS: %s", platform.mac_ver()[0])
 
     # Check for FFmpeg
     from mp3recorder.dependencies import get_ffmpeg_path
 
     ffmpeg_path = get_ffmpeg_path()
     if ffmpeg_path:
-        logger.info(f"FFmpeg: {ffmpeg_path}")
+        logger.info("FFmpeg: %s", ffmpeg_path)
     else:
         logger.warning("FFmpeg: NOT FOUND")
 

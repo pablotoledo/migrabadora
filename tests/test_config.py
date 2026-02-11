@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -125,7 +124,7 @@ class TestSaveLoad:
 
         assert cfg.CONFIG_FILE.exists()
 
-        with open(cfg.CONFIG_FILE) as f:
+        with cfg.CONFIG_FILE.open() as f:
             data = json.load(f)
         assert data["bitrate"] == 256
 
@@ -155,7 +154,7 @@ class TestSaveLoad:
         import mp3recorder.config as cfg
 
         # Write invalid JSON
-        with open(cfg.CONFIG_FILE, "w") as f:
+        with cfg.CONFIG_FILE.open("w") as f:
             f.write("{ invalid json }")
 
         loaded = load()
@@ -167,7 +166,7 @@ class TestSaveLoad:
         import mp3recorder.config as cfg
 
         # Write JSON with invalid type for a field
-        with open(cfg.CONFIG_FILE, "w") as f:
+        with cfg.CONFIG_FILE.open("w") as f:
             json.dump({"bitrate": "not_a_number"}, f)
 
         # This should fail during AppConfig construction
@@ -180,12 +179,15 @@ class TestSaveLoad:
         """Should ignore unknown fields in config file."""
         import mp3recorder.config as cfg
 
-        with open(cfg.CONFIG_FILE, "w") as f:
-            json.dump({
-                "bitrate": 256,
-                "unknown_field": "should be ignored",
-                "another_unknown": 123,
-            }, f)
+        with cfg.CONFIG_FILE.open("w") as f:
+            json.dump(
+                {
+                    "bitrate": 256,
+                    "unknown_field": "should be ignored",
+                    "another_unknown": 123,
+                },
+                f,
+            )
 
         loaded = load()
 
@@ -220,7 +222,7 @@ class TestMigration:
         import mp3recorder.config as cfg
 
         # Write old config without version
-        with open(cfg.CONFIG_FILE, "w") as f:
+        with cfg.CONFIG_FILE.open("w") as f:
             json.dump({"bitrate": 256}, f)
 
         loaded = load()

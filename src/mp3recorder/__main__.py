@@ -6,6 +6,7 @@ import sys
 def main():
     """Main entry point - launches menubar app."""
     from mp3recorder.menubar import main as menubar_main
+
     return menubar_main()
 
 
